@@ -74,7 +74,9 @@ public fun handle_base_payment<T>(
 
     assert!(payment_type == config.base_currency, EInvalidPaymentType);
 
-    suins.get_config_for_type<T>().apply_discount_if_eligible(suins, &mut intent);
+    suins
+        .get_config_for_type<T>()
+        .apply_discount_if_eligible(suins, &mut intent);
 
     let price = intent.request_data().base_amount();
     assert!(payment.value() == price, EInsufficientPayment);
@@ -102,7 +104,6 @@ public fun handle_payment<T>(
     payment: Coin<T>,
     clock: &Clock,
     price_info_object: &PriceInfoObject,
-    // TODO: Does this make sense? Need thoughts :)
     user_price_guard: u64,
 ): Receipt {
     let type_config = suins.get_config_for_type<T>();
@@ -115,7 +116,7 @@ public fun handle_payment<T>(
         price_info_object,
     );
     assert!(payment.value() == target_currency_amount, EInsufficientPayment);
-    assert!(user_price_guard <= target_currency_amount, ESafeguardViolation);
+    assert!(user_price_guard >= target_currency_amount, ESafeguardViolation); // price guard should be larger than the payment amount
 
     intent.finalize_payment(suins, PaymentsApp(), payment)
 }
@@ -245,7 +246,8 @@ fun apply_discount_if_eligible(
         PaymentsApp(),
         PAYMENT_DISCOUNT_KEY.to_string(),
         coin_type_data.discount_percentage,
-        // payments package discount can be applied even if other discounts are applied.
+        // payments package discount can be applied even if other discounts are
+        // applied.
         true,
     );
 }
