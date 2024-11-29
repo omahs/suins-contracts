@@ -10,6 +10,7 @@ use suins::pricing_config::{Self, PricingConfig};
 use suins::suins::{Self, SuiNS};
 use suins::registry;
 use suins::constants;
+use suins::core_config;
 use suins::suins_registration;
 use suins::domain;
 
@@ -278,6 +279,7 @@ fun setup_suins(ctx: &mut TxContext): SuiNS {
     cap.add_config(&mut suins, test_pricing_config(false));
     // add a renewal config.
     cap.add_config(&mut suins, renewal_config);
+    cap.add_config(&mut suins, core_config::default());
 
     // authorize a "payments" app that is responsible for handling payments and
     // issuing receipts.
