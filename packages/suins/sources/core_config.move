@@ -81,17 +81,6 @@ public fun payments_version(config: &CoreConfig): u8 {
     config.payments_version
 }
 
-public(package) fun is_valid_for_sale(config: &CoreConfig, domain: &Domain): bool {
-    // We block subdomains for regular sales.
-    if (domain.is_subdomain()) return false;
-    let sld_len = domain.sld().length();
-    if (sld_len < (config.min_label_length as u64) || sld_len > (config.max_label_length as u64)) {
-        return false
-    };
-
-    return config.is_valid_tld(domain.tld())
-}
-
 public(package) fun assert_is_valid_for_sale(config: &CoreConfig, domain: &Domain) {
     assert!(!domain.is_subdomain(), ESubnameNotSupported);
     assert!(config.is_valid_tld(domain.tld()), EInvalidTld);

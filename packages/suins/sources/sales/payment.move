@@ -147,6 +147,10 @@ public fun apply_percentage_discount<A: drop>(
 
 /// Allow an authorized app to finalize a payment.
 /// Returns a receipt that can be used to register or renew a domain.
+///
+/// SAFETY: Only authorized packages can call this.
+/// We do not check the amount of funds in this helper.
+/// This is the responsibility of the `payments` app.
 public fun finalize_payment<A: drop, T>(
     intent: PaymentIntent,
     suins: &mut SuiNS,
@@ -244,9 +248,12 @@ public fun register(
     clock: &Clock,
     ctx: &mut TxContext,
 ): SuinsRegistration {
+    let config = suins.get_config<CoreConfig>();
+
     match (receipt) {
         Receipt::Registration { domain, years, version } => {
-            assert!(version == suins.get_config<CoreConfig>().payments_version(), EVersionMismatch);
+            assert!(version == config.payments_version(), EVersionMismatch);
+            config.assert_is_valid_for_sale(&domain); // sanity check. We also check on `init_registration`.
             suins.pkg_registry_mut<Registry>().add_record(domain, years, clock, ctx)
         },
         Receipt::Renewal { domain: _, years: _, version: _ } => {

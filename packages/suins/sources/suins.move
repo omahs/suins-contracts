@@ -26,7 +26,6 @@ use sui::balance::{Self, Balance};
 use sui::coin::{Self, Coin};
 use sui::dynamic_field as df;
 use sui::sui::SUI;
-use suins::pricing_config::{Self, new_range};
 
 use fun df::add as UID.add;
 use fun df::borrow as UID.borrow;
@@ -219,6 +218,8 @@ public(package) fun pkg_registry_mut<R: store>(self: &mut SuiNS): &mut R {
 
 #[test_only]
 use suins::core_config;
+#[test_only]
+use suins::pricing_config::{Self, new_range};
 #[test_only]
 public struct Test has drop {}
 
