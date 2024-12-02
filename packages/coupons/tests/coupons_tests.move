@@ -209,7 +209,7 @@ fun specific_max_years() {
         option::none(),
         option::none(),
         option::none(),
-        option::some(range::new(0, 1)),
+        option::some(range::new(1, 1)),
     );
 }
 
