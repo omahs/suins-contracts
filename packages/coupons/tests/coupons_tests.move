@@ -117,6 +117,7 @@ fun populate_coupons(scenario: &mut Scenario) {
 
 //     scenario_val.end();
 // }
+
 #[test]
 fun zero_fee_purchase() {
     let mut scenario_val = test_init();
@@ -130,45 +131,41 @@ fun zero_fee_purchase() {
         100,
         scenario,
     );
-    scenario.next_tx(user());
-    {
-        let mut suins = scenario.take_shared<SuiNS>();
-        let mut intent = init_registration(
-            &mut suins,
-            b"test.sui".to_string(),
-        );
-        let clock = scenario.take_shared<Clock>();
-        coupon_house::apply_coupon(
-            &mut suins,
-            &mut intent,
-            b"100%_OFF".to_string(),
-            &clock,
-            scenario.ctx(),
-        );
-
-        assert!(intent.request_data().base_amount() == 0, 0);
-        return_shared(suins);
-        return_shared(clock);
-        destroy(intent);
-    };
+    test_coupon_register(
+        scenario,
+        b"test.sui".to_string(),
+        b"100%_OFF".to_string(),
+        user(),
+        option::some(0),
+    );
 
     scenario_val.end();
 }
 
-fun init_registration(suins: &mut SuiNS, domain: String): PaymentIntent {
-    let intent = suins::payment::init_registration(suins, domain);
+#[test]
+fun fifty_percent_off_4() {
+    let mut scenario_val = test_init();
+    let scenario = &mut scenario_val;
+    // populate all coupons.
+    populate_coupons(scenario);
+    // 100% discount coupon.
+    admin_add_coupon(
+        b"50%_OFF".to_string(),
+        constants::percentage_discount_type(),
+        50,
+        scenario,
+    );
+    test_coupon_register(
+        scenario,
+        b"test.sui".to_string(),
+        b"50%_OFF".to_string(),
+        user(),
+        option::some(
+            100 * suins::constants::mist_per_sui(),
+        ), // 4 character in test is 200 SUI, 50% discount
+    );
 
-    intent
-}
-
-fun init_renewal(
-    suins: &mut SuiNS,
-    nft: &SuinsRegistration,
-    years: u8,
-): PaymentIntent {
-    let intent = suins::payment::init_renewal(suins, nft, years);
-
-    intent
+    scenario_val.end();
 }
 
 #[test]
@@ -210,12 +207,14 @@ fun no_more_available_claims_failure() {
         b"test.sui".to_string(),
         b"25_PERCENT_DISCOUNT_USER_ONLY".to_string(),
         user(),
+        option::none(),
     );
     test_coupon_register(
         scenario,
         b"tost.sui".to_string(),
         b"25_PERCENT_DISCOUNT_USER_ONLY".to_string(),
         user(),
+        option::none(),
     );
     scenario_val.end();
 }
@@ -230,6 +229,7 @@ fun invalid_user_failure() {
         b"test.sui".to_string(),
         b"25_PERCENT_DISCOUNT_USER_ONLY".to_string(),
         user_two(),
+        option::none(),
     );
     scenario_val.end();
 }
@@ -248,6 +248,7 @@ fun coupon_expired_failure() {
         b"tes.sui".to_string(),
         b"50_PERCENT_3_DIGITS".to_string(),
         user(),
+        option::none(),
     );
     scenario_val.end();
 }
@@ -284,6 +285,7 @@ fun coupon_invalid_length_1_failure() {
         b"test.sui".to_string(),
         b"50_PERCENT_3_DIGITS".to_string(),
         user(),
+        option::none(),
     );
     scenario_val.end();
 }
@@ -304,6 +306,7 @@ fun coupon_invalid_length_2_failure() {
         b"testo.sui".to_string(),
         b"50_DISCOUNT_SALAD".to_string(),
         user(),
+        option::none(),
     );
     scenario_val.end();
 }
@@ -324,75 +327,10 @@ fun coupon_invalid_length_3_failure() {
         b"test.sui".to_string(),
         b"50_PERCENT_5_PLUS_NAMES".to_string(),
         user(),
+        option::none(),
     );
 
     scenario_val.end();
-}
-
-fun test_coupon_register(
-    scenario: &mut Scenario,
-    domain: String,
-    coupon_code: String,
-    user: address,
-) {
-    scenario.next_tx(user);
-    {
-        let mut suins = scenario.take_shared<SuiNS>();
-        let mut intent = init_registration(
-            &mut suins,
-            domain,
-        );
-        let clock = scenario.take_shared<Clock>();
-        coupon_house::apply_coupon(
-            &mut suins,
-            &mut intent,
-            coupon_code,
-            &clock,
-            scenario.ctx(),
-        );
-
-        return_shared(suins);
-        return_shared(clock);
-        destroy(intent);
-    };
-}
-
-fun test_coupon_renewal(
-    scenario: &mut Scenario,
-    domain: String,
-    renewal_years: u8,
-    coupon_code: String,
-    user: address,
-) {
-    scenario.next_tx(user);
-    {
-        let mut suins = scenario.take_shared<SuiNS>();
-        let clock = scenario.take_shared<Clock>();
-        let nft = suins::suins_registration::new_for_testing(
-            suins::domain::new(domain),
-            1,
-            &clock,
-            scenario.ctx(),
-        );
-
-        let mut intent = init_renewal(
-            &mut suins,
-            &nft,
-            renewal_years,
-        );
-        coupon_house::apply_coupon(
-            &mut suins,
-            &mut intent,
-            coupon_code,
-            &clock,
-            scenario.ctx(),
-        );
-
-        return_shared(suins);
-        return_shared(clock);
-        destroy(intent);
-        destroy(nft);
-    };
 }
 
 #[test]
@@ -479,4 +417,93 @@ fun remove_non_existing_coupon() {
     let mut data = data::new(&mut ctx);
     data.remove_coupon(b"TEST_SUCCESS_ADDITION".to_string());
     test_utils::destroy(data);
+}
+
+fun test_coupon_register(
+    scenario: &mut Scenario,
+    domain: String,
+    coupon_code: String,
+    user: address,
+    amount: Option<u64>,
+) {
+    scenario.next_tx(user);
+    {
+        let mut suins = scenario.take_shared<SuiNS>();
+        let mut intent = init_registration(
+            &mut suins,
+            domain,
+        );
+        let clock = scenario.take_shared<Clock>();
+        coupon_house::apply_coupon(
+            &mut suins,
+            &mut intent,
+            coupon_code,
+            &clock,
+            scenario.ctx(),
+        );
+        if (amount.is_some()) {
+            assert!(
+                intent.request_data().base_amount() == amount.get_with_default(0),
+                0,
+            );
+        };
+
+        return_shared(suins);
+        return_shared(clock);
+        destroy(intent);
+    };
+}
+
+fun test_coupon_renewal(
+    scenario: &mut Scenario,
+    domain: String,
+    renewal_years: u8,
+    coupon_code: String,
+    user: address,
+) {
+    scenario.next_tx(user);
+    {
+        let mut suins = scenario.take_shared<SuiNS>();
+        let clock = scenario.take_shared<Clock>();
+        let nft = suins::suins_registration::new_for_testing(
+            suins::domain::new(domain),
+            1,
+            &clock,
+            scenario.ctx(),
+        );
+
+        let mut intent = init_renewal(
+            &mut suins,
+            &nft,
+            renewal_years,
+        );
+        coupon_house::apply_coupon(
+            &mut suins,
+            &mut intent,
+            coupon_code,
+            &clock,
+            scenario.ctx(),
+        );
+
+        return_shared(suins);
+        return_shared(clock);
+        destroy(intent);
+        destroy(nft);
+    };
+}
+
+fun init_registration(suins: &mut SuiNS, domain: String): PaymentIntent {
+    let intent = suins::payment::init_registration(suins, domain);
+
+    intent
+}
+
+fun init_renewal(
+    suins: &mut SuiNS,
+    nft: &SuinsRegistration,
+    years: u8,
+): PaymentIntent {
+    let intent = suins::payment::init_renewal(suins, nft, years);
+
+    intent
 }
