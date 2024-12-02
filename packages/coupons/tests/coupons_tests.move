@@ -25,6 +25,7 @@ use sui::test_scenario::{Self, Scenario, return_shared};
 use sui::test_utils::{Self, destroy};
 use suins::payment::PaymentIntent;
 use suins::suins::SuiNS;
+use suins::suins_registration::SuinsRegistration;
 
 // populate a lot of coupons with different cases.
 // This populates the coupon as an authorized app
@@ -147,8 +148,8 @@ fun zero_fee_purchase() {
         );
 
         assert!(intent.request_data().base_amount() == 0, 0);
-        test_scenario::return_shared(suins);
-        test_scenario::return_shared(clock);
+        return_shared(suins);
+        return_shared(clock);
         destroy(intent);
     };
 
@@ -157,6 +158,16 @@ fun zero_fee_purchase() {
 
 fun init_registration(suins: &mut SuiNS, domain: String): PaymentIntent {
     let intent = suins::payment::init_registration(suins, domain);
+
+    intent
+}
+
+fun init_renewal(
+    suins: &mut SuiNS,
+    nft: &SuinsRegistration,
+    years: u8,
+): PaymentIntent {
+    let intent = suins::payment::init_renewal(suins, nft, years);
 
     intent
 }
@@ -298,107 +309,158 @@ fun max_years_two_failure() {
 //     scenario_val.end();
 // }
 
-// #[test, expected_failure(abort_code = ::coupons::rules::ECouponExpired)]
-// fun coupon_expired_failure() {
-//     let mut scenario_val = test_init();
-//     let scenario = &mut scenario_val;
-//     populate_coupons(scenario);
-//     register_with_coupon(
-//         b"50_PERCENT_3_DIGITS".to_string(),
-//         b"tes.sui".to_string(),
-//         1,
-//         150 * mist_per_sui(),
-//         2,
-//         user_two(),
-//         scenario,
-//     );
-//     scenario_val.end();
-// }
+#[test, expected_failure(abort_code = ::coupons::rules::ECouponExpired)]
+fun coupon_expired_failure() {
+    let mut scenario_val = test_init();
+    let scenario = &mut scenario_val;
+    // set the clock to 5, coupon is expired
+    let mut clock = test_scenario::take_shared<Clock>(scenario);
+    clock.set_for_testing(5);
+    return_shared(clock);
+    populate_coupons(scenario);
+    test_coupon_register(
+        scenario,
+        b"tes.sui".to_string(),
+        b"50_PERCENT_3_DIGITS".to_string(),
+    );
+    scenario_val.end();
+}
 
 // #[test, expected_failure(abort_code = ::coupons::rules::ENotValidYears)]
 // fun coupon_not_valid_for_years_failure() {
 //     let mut scenario_val = test_init();
 //     let scenario = &mut scenario_val;
 //     populate_coupons(scenario);
-//     register_with_coupon(
-//         b"50_DISCOUNT_SALAD".to_string(),
-//         b"tes.sui".to_string(),
+//     // Test 3 years of renewal with a coupon that only allows 1-2 years.
+//     test_coupon_renewal(
+//         scenario,
+//         b"test.sui".to_string(),
 //         3,
-//         150 * mist_per_sui(),
-//         0,
-//         user(),
-//         scenario,
-//     );
-//     scenario_val.end();
-// }
-
-// #[
-//     test,
-//     expected_failure(
-//         abort_code = ::coupons::rules::EInvalidForDomainLength,
-//     ),
-// ]
-// fun coupon_invalid_length_1_failure() {
-//     let mut scenario_val = test_init();
-//     let scenario = &mut scenario_val;
-//     populate_coupons(scenario);
-//     register_with_coupon(
-//         b"50_PERCENT_3_DIGITS".to_string(),
-//         b"test.sui".to_string(),
-//         1,
-//         150 * mist_per_sui(),
-//         2,
-//         user_two(),
-//         scenario,
-//     );
-//     scenario_val.end();
-// }
-
-// #[
-//     test,
-//     expected_failure(
-//         abort_code = ::coupons::rules::EInvalidForDomainLength,
-//     ),
-// ]
-// fun coupon_invalid_length_2_failure() {
-//     let mut scenario_val = test_init();
-//     let scenario = &mut scenario_val;
-//     populate_coupons(scenario);
-//     // Tries to use 5 digit name for a <=4 digit one.
-//     register_with_coupon(
 //         b"50_DISCOUNT_SALAD".to_string(),
-//         b"testo.sui".to_string(),
-//         1,
-//         150 * mist_per_sui(),
-//         2,
-//         user(),
-//         scenario,
 //     );
 //     scenario_val.end();
 // }
 
-// #[
-//     test,
-//     expected_failure(
-//         abort_code = ::coupons::rules::EInvalidForDomainLength,
-//     ),
-// ]
-// fun coupon_invalid_length_3_failure() {
-//     let mut scenario_val = test_init();
-//     let scenario = &mut scenario_val;
-//     populate_coupons(scenario);
-//     // Tries to use 4 digit name for a 5+ chars coupon.
-//     register_with_coupon(
-//         b"50_PERCENT_5_PLUS_NAMES".to_string(),
-//         b"test.sui".to_string(),
-//         1,
-//         150 * mist_per_sui(),
-//         2,
-//         user(),
-//         scenario,
-//     );
-//     scenario_val.end();
-// }
+#[
+    test,
+    expected_failure(
+        abort_code = ::coupons::rules::EInvalidForDomainLength,
+    ),
+]
+fun coupon_invalid_length_1_failure() {
+    let mut scenario_val = test_init();
+    let scenario = &mut scenario_val;
+    populate_coupons(scenario);
+    // Tries to use 3 digit coupon on <=4 digit name
+    test_coupon_register(
+        scenario,
+        b"test.sui".to_string(),
+        b"50_PERCENT_3_DIGITS".to_string(),
+    );
+    scenario_val.end();
+}
+
+#[
+    test,
+    expected_failure(
+        abort_code = ::coupons::rules::EInvalidForDomainLength,
+    ),
+]
+fun coupon_invalid_length_2_failure() {
+    let mut scenario_val = test_init();
+    let scenario = &mut scenario_val;
+    populate_coupons(scenario);
+    // Tries to use <=4 digit coupon for 5 digit name
+    test_coupon_register(
+        scenario,
+        b"testo.sui".to_string(),
+        b"50_DISCOUNT_SALAD".to_string(),
+    );
+    scenario_val.end();
+}
+
+#[
+    test,
+    expected_failure(
+        abort_code = ::coupons::rules::EInvalidForDomainLength,
+    ),
+]
+fun coupon_invalid_length_3_failure() {
+    let mut scenario_val = test_init();
+    let scenario = &mut scenario_val;
+    populate_coupons(scenario);
+    // Tries to use 5+ digit coupon on 4 digit name
+    test_coupon_register(
+        scenario,
+        b"test.sui".to_string(),
+        b"50_PERCENT_5_PLUS_NAMES".to_string(),
+    );
+
+    scenario_val.end();
+}
+
+fun test_coupon_register(
+    scenario: &mut Scenario,
+    domain: String,
+    coupon_code: String,
+) {
+    scenario.next_tx(user());
+    {
+        let mut suins = test_scenario::take_shared<SuiNS>(scenario);
+        let mut intent = init_registration(
+            &mut suins,
+            domain,
+        );
+        let clock = test_scenario::take_shared<Clock>(scenario);
+        coupon_house::apply_coupon(
+            &mut suins,
+            &mut intent,
+            coupon_code,
+            &clock,
+            scenario.ctx(),
+        );
+
+        return_shared(suins);
+        return_shared(clock);
+        destroy(intent);
+    };
+}
+
+fun test_coupon_renewal(
+    scenario: &mut Scenario,
+    domain: String,
+    renewal_years: u8,
+    coupon_code: String,
+) {
+    scenario.next_tx(user());
+    {
+        let clock = test_scenario::take_shared<Clock>(scenario);
+        let nft = suins::suins_registration::new_for_testing(
+            suins::domain::new(domain),
+            1,
+            &clock,
+            scenario.ctx(),
+        );
+        let mut suins = test_scenario::take_shared<SuiNS>(scenario);
+        let mut intent = init_renewal(
+            &mut suins,
+            &nft,
+            renewal_years,
+        );
+        coupon_house::apply_coupon(
+            &mut suins,
+            &mut intent,
+            coupon_code,
+            &clock,
+            scenario.ctx(),
+        );
+
+        return_shared(suins);
+        return_shared(clock);
+        destroy(intent);
+        destroy(nft);
+    };
+}
 
 #[test]
 fun add_coupon_as_admin() {

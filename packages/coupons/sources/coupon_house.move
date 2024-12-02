@@ -36,12 +36,8 @@ const EAppNotAuthorized: u64 = 1;
 const EInvalidVersion: u64 = 2;
 
 /// These errors are claim errors.
-/// Number of years passed is not within [1-5] interval.
-const EInvalidYearsArgument: u64 = 3;
-/// The payment does not match the price for the domain.
-const EIncorrectAmount: u64 = 4;
 /// Coupon doesn't exist.
-const ECouponNotExists: u64 = 5;
+const ECouponNotExists: u64 = 3;
 
 /// Our versioning of the coupons package.
 const VERSION: u8 = 2;

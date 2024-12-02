@@ -25,10 +25,8 @@ const EInvalidType: u64 = 5;
 const EInvalidUser: u64 = 6;
 /// Error when coupon has expired
 const ECouponExpired: u64 = 7;
-/// Error when creating years range.
-const EInvalidYears: u64 = 8;
 /// Available claims can't be 0.
-const EInvalidAvailableClaims: u64 = 9;
+const EInvalidAvailableClaims: u64 = 8;
 
 /// The Struct that holds the coupon's rules.
 /// All rules are combined in `AND` fashion.
