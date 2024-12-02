@@ -10,9 +10,7 @@ use coupons::data::Data;
 use coupons::range;
 use coupons::rules;
 use std::string::{utf8, String};
-use sui::clock::{Self, Clock};
-use sui::coin;
-use sui::sui::SUI;
+use sui::clock;
 use sui::test_scenario::{Self, Scenario, ctx};
 use suins::registry;
 use suins::suins::{Self, AdminCap, SuiNS};
@@ -214,41 +212,4 @@ public fun admin_remove_coupon(code_name: String, scenario: &mut Scenario) {
     );
     scenario.return_to_sender(cap);
     test_scenario::return_shared(suins);
-}
-
-// Internal helper that tries to claim a name using a coupon.
-// Test prices are:
-// 3 digit -> 1200
-// 4 digit -> 200
-// 5 digit -> 50
-// A helper to easily register a name with a coupon code.
-public fun register_with_coupon(
-    coupon_code: String,
-    domain_name: String,
-    no_years: u8,
-    amount: u64,
-    clock_value: u64,
-    user: address,
-    scenario: &mut Scenario,
-) {
-    scenario.next_tx(user);
-    let mut clock = scenario.take_shared<Clock>();
-    clock.increment_for_testing(clock_value);
-    let mut suins = scenario.take_shared<SuiNS>();
-
-    let payment = coin::mint_for_testing<SUI>(amount, scenario.ctx());
-
-    let nft = coupon_house::register_with_coupon(
-        &mut suins,
-        coupon_code,
-        domain_name,
-        no_years,
-        payment,
-        &clock,
-        scenario.ctx(),
-    );
-
-    transfer::public_transfer(nft, user);
-    test_scenario::return_shared(suins);
-    test_scenario::return_shared(clock);
 }

@@ -23,10 +23,7 @@ use sui::clock::Clock;
 use sui::coin::Coin;
 use sui::dynamic_field as df;
 use sui::sui::SUI;
-use suins::config::{Self, Config};
-use suins::domain;
 use suins::payment::PaymentIntent;
-use suins::registry::Registry;
 use suins::suins::{Self, AdminCap, SuiNS};
 use suins::suins_registration::SuinsRegistration;
 

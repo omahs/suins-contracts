@@ -16,13 +16,13 @@ use coupons::setup::{
     user_two,
     test_app,
     admin_add_coupon,
-    test_init
+    test_init,
+    mist_per_sui
 };
 use std::string::String;
 use sui::clock::Clock;
 use sui::test_scenario::{Scenario, return_shared};
 use sui::test_utils::{Self, destroy};
-use suins::constants::mist_per_sui;
 use suins::payment::PaymentIntent;
 use suins::suins::SuiNS;
 use suins::suins_registration::SuinsRegistration;
