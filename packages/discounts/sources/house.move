@@ -30,20 +30,16 @@ fun init(ctx: &mut TxContext) {
     })
 }
 
-public(package) macro fun discount_house_key(): String {
-    b"object_discount".to_string()
-}
-
 public fun set_version(self: &mut DiscountHouse, _: &AdminCap, version: u8) {
     self.version = version;
 }
 
-public(package) fun assert_version_is_valid(self: &DiscountHouse) {
-    assert!(self.version == VERSION, EInvalidVersion);
+public(package) macro fun discount_house_key(): String {
+    b"object_discount".to_string()
 }
 
-public(package) fun uid(self: &DiscountHouse): &UID {
-    &self.id
+public(package) fun assert_version_is_valid(self: &DiscountHouse) {
+    assert!(self.version == VERSION, EInvalidVersion);
 }
 
 /// A helper function to get a mutable reference to the UID.

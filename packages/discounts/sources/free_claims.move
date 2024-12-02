@@ -83,6 +83,42 @@ public fun free_claim_with_day_one(
     self.internal_apply_full_discount<DayOne>(suins, intent, object::id(day_one), ctx);
 }
 
+/// An admin action to authorize a type T for free claiming of names by
+/// presenting
+/// an object of type `T`.
+public fun authorize_type<T: key>(
+    self: &mut DiscountHouse,
+    _: &AdminCap,
+    domain_length_range: Range,
+    ctx: &mut TxContext,
+) {
+    self.assert_version_is_valid();
+    assert!(!self.uid_mut().exists_(FreeClaimsKey<T>()), EConfigExists);
+
+    self
+        .uid_mut()
+        .add(
+            FreeClaimsKey<T>(),
+            FreeClaimsConfig {
+                domain_length_range,
+                used_objects: linked_table::new(ctx),
+            },
+        );
+}
+
+/// Force-deauthorize type T from free claims.
+/// Drops the linked_table.
+public fun deauthorize_type<T>(self: &mut DiscountHouse, _: &AdminCap): LinkedTable<ID, bool> {
+    self.assert_version_is_valid();
+    self.assert_config_exists<T>();
+
+    let FreeClaimsConfig { used_objects, domain_length_range: _ } = self
+        .uid_mut()
+        .remove(FreeClaimsKey<T>());
+
+    used_objects
+}
+
 /// Internal helper that checks if there's a valid configuration for T,
 /// validates that the domain name is of vlaid length, and then does the
 /// registration.
@@ -120,42 +156,6 @@ fun internal_apply_full_discount<T: key>(
         100,
         false,
     );
-}
-
-/// An admin action to authorize a type T for free claiming of names by
-/// presenting
-/// an object of type `T`.
-public fun authorize_type<T: key>(
-    _: &AdminCap,
-    self: &mut DiscountHouse,
-    domain_length_range: Range,
-    ctx: &mut TxContext,
-) {
-    self.assert_version_is_valid();
-    assert!(!self.uid_mut().exists_(FreeClaimsKey<T>()), EConfigExists);
-
-    self
-        .uid_mut()
-        .add(
-            FreeClaimsKey<T>(),
-            FreeClaimsConfig {
-                domain_length_range,
-                used_objects: linked_table::new(ctx),
-            },
-        );
-}
-
-/// Force-deauthorize type T from free claims.
-/// Drops the linked_table.
-public fun force_deauthorize_type<T>(_: &AdminCap, self: &mut DiscountHouse) {
-    self.assert_version_is_valid();
-    self.assert_config_exists<T>();
-
-    let FreeClaimsConfig { used_objects, domain_length_range: _ } = self
-        .uid_mut()
-        .remove(FreeClaimsKey<T>());
-
-    used_objects.drop();
 }
 
 fun config_mut<T>(self: &mut DiscountHouse): &mut FreeClaimsConfig {
