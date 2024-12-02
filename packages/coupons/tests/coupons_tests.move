@@ -14,14 +14,13 @@ use coupons::setup::{
     TestApp,
     user,
     user_two,
-    mist_per_sui,
     test_app,
     admin_add_coupon,
     test_init
 };
 use std::string::String;
 use sui::clock::Clock;
-use sui::test_scenario::{Self, Scenario, return_shared};
+use sui::test_scenario::{Scenario, return_shared};
 use sui::test_utils::{Self, destroy};
 use suins::payment::PaymentIntent;
 use suins::suins::SuiNS;
@@ -133,12 +132,12 @@ fun zero_fee_purchase() {
     );
     scenario.next_tx(user());
     {
-        let mut suins = test_scenario::take_shared<SuiNS>(scenario);
+        let mut suins = scenario.take_shared<SuiNS>();
         let mut intent = init_registration(
             &mut suins,
             b"test.sui".to_string(),
         );
-        let clock = test_scenario::take_shared<Clock>(scenario);
+        let clock = scenario.take_shared<Clock>();
         coupon_house::apply_coupon(
             &mut suins,
             &mut intent,
@@ -194,127 +193,53 @@ fun max_years_two_failure() {
     );
 }
 
-// // Tests the e2e experience for coupons (a list of different coupons with
-// // different rules)
-// #[
-//     test,
-//     expected_failure(
-//         abort_code = ::coupons::coupon_house::EIncorrectAmount,
-//     ),
-// ]
-// fun test_invalid_coin_failure() {
-//     let mut scenario_val = test_init();
-//     let scenario = &mut scenario_val;
-//     // populate all coupons.
-//     populate_coupons(scenario);
-//     // 5 SUI discount coupon.
-//     register_with_coupon(
-//         b"5_SUI_DISCOUNT".to_string(),
-//         b"test.sui".to_string(),
-//         1,
-//         200 * mist_per_sui(),
-//         0,
-//         user(),
-//         scenario,
-//     );
-//     scenario_val.end();
-// }
-// #[
-//     test,
-//     expected_failure(
-//         abort_code = ::coupons::coupon_house::ECouponNotExists,
-//     ),
-// ]
-// fun no_more_available_claims_failure() {
-//     let mut scenario_val = test_init();
-//     let scenario = &mut scenario_val;
-//     populate_coupons(scenario);
-//     register_with_coupon(
-//         b"25_PERCENT_DISCOUNT_USER_ONLY".to_string(),
-//         b"test.sui".to_string(),
-//         1,
-//         150 * mist_per_sui(),
-//         0,
-//         user(),
-//         scenario,
-//     );
-//     register_with_coupon(
-//         b"25_PERCENT_DISCOUNT_USER_ONLY".to_string(),
-//         b"tost.sui".to_string(),
-//         1,
-//         150 * mist_per_sui(),
-//         0,
-//         user(),
-//         scenario,
-//     );
-//     scenario_val.end();
-// }
-// #[
-//     test,
-//     expected_failure(
-//         abort_code = ::coupons::coupon_house::EInvalidYearsArgument,
-//     ),
-// ]
-// fun invalid_years_claim_failure() {
-//     let mut scenario_val = test_init();
-//     let scenario = &mut scenario_val;
-//     populate_coupons(scenario);
-//     register_with_coupon(
-//         b"25_PERCENT_DISCOUNT_USER_ONLY".to_string(),
-//         b"test.sui".to_string(),
-//         6,
-//         150 * mist_per_sui(),
-//         0,
-//         user(),
-//         scenario,
-//     );
-//     scenario_val.end();
-// }
-// #[
-//     test,
-//     expected_failure(
-//         abort_code = ::coupons::coupon_house::EInvalidYearsArgument,
-//     ),
-// ]
-// fun invalid_years_claim_1_failure() {
-//     let mut scenario_val = test_init();
-//     let scenario = &mut scenario_val;
-//     populate_coupons(scenario);
-//     register_with_coupon(
-//         b"25_PERCENT_DISCOUNT_USER_ONLY".to_string(),
-//         b"test.sui".to_string(),
-//         0,
-//         150 * mist_per_sui(),
-//         0,
-//         user(),
-//         scenario,
-//     );
-//     scenario_val.end();
-// }
+// Tests the e2e experience for coupons (a list of different coupons with
+// different rules)
+#[
+    test,
+    expected_failure(
+        abort_code = ::coupons::coupon_house::ECouponNotExists,
+    ),
+]
+fun no_more_available_claims_failure() {
+    let mut scenario_val = test_init();
+    let scenario = &mut scenario_val;
+    populate_coupons(scenario);
+    test_coupon_register(
+        scenario,
+        b"test.sui".to_string(),
+        b"25_PERCENT_DISCOUNT_USER_ONLY".to_string(),
+        user(),
+    );
+    test_coupon_register(
+        scenario,
+        b"tost.sui".to_string(),
+        b"25_PERCENT_DISCOUNT_USER_ONLY".to_string(),
+        user(),
+    );
+    scenario_val.end();
+}
 
-// #[test, expected_failure(abort_code = ::coupons::rules::EInvalidUser)]
-// fun invalid_user_failure() {
-//     let mut scenario_val = test_init();
-//     let scenario = &mut scenario_val;
-//     populate_coupons(scenario);
-//     register_with_coupon(
-//         b"25_PERCENT_DISCOUNT_USER_ONLY".to_string(),
-//         b"test.sui".to_string(),
-//         1,
-//         150 * mist_per_sui(),
-//         0,
-//         user_two(),
-//         scenario,
-//     );
-//     scenario_val.end();
-// }
+#[test, expected_failure(abort_code = ::coupons::rules::EInvalidUser)]
+fun invalid_user_failure() {
+    let mut scenario_val = test_init();
+    let scenario = &mut scenario_val;
+    populate_coupons(scenario);
+    test_coupon_register(
+        scenario,
+        b"test.sui".to_string(),
+        b"25_PERCENT_DISCOUNT_USER_ONLY".to_string(),
+        user_two(),
+    );
+    scenario_val.end();
+}
 
 #[test, expected_failure(abort_code = ::coupons::rules::ECouponExpired)]
 fun coupon_expired_failure() {
     let mut scenario_val = test_init();
     let scenario = &mut scenario_val;
-    // set the clock to 5, coupon is expired
-    let mut clock = test_scenario::take_shared<Clock>(scenario);
+    // set the clock to 5, coupon is expired at time 1
+    let mut clock = scenario.take_shared<Clock>();
     clock.set_for_testing(5);
     return_shared(clock);
     populate_coupons(scenario);
@@ -322,24 +247,26 @@ fun coupon_expired_failure() {
         scenario,
         b"tes.sui".to_string(),
         b"50_PERCENT_3_DIGITS".to_string(),
+        user(),
     );
     scenario_val.end();
 }
 
-// #[test, expected_failure(abort_code = ::coupons::rules::ENotValidYears)]
-// fun coupon_not_valid_for_years_failure() {
-//     let mut scenario_val = test_init();
-//     let scenario = &mut scenario_val;
-//     populate_coupons(scenario);
-//     // Test 3 years of renewal with a coupon that only allows 1-2 years.
-//     test_coupon_renewal(
-//         scenario,
-//         b"test.sui".to_string(),
-//         3,
-//         b"50_DISCOUNT_SALAD".to_string(),
-//     );
-//     scenario_val.end();
-// }
+#[test, expected_failure(abort_code = ::coupons::rules::ENotValidYears)]
+fun coupon_not_valid_for_years_failure() {
+    let mut scenario_val = test_init();
+    let scenario = &mut scenario_val;
+    populate_coupons(scenario);
+    // Test 3 years of renewal with a coupon that only allows 1-2 years.
+    test_coupon_renewal(
+        scenario,
+        b"test.sui".to_string(),
+        3,
+        b"50_DISCOUNT_SALAD".to_string(),
+        user(),
+    );
+    scenario_val.end();
+}
 
 #[
     test,
@@ -356,6 +283,7 @@ fun coupon_invalid_length_1_failure() {
         scenario,
         b"test.sui".to_string(),
         b"50_PERCENT_3_DIGITS".to_string(),
+        user(),
     );
     scenario_val.end();
 }
@@ -375,6 +303,7 @@ fun coupon_invalid_length_2_failure() {
         scenario,
         b"testo.sui".to_string(),
         b"50_DISCOUNT_SALAD".to_string(),
+        user(),
     );
     scenario_val.end();
 }
@@ -394,6 +323,7 @@ fun coupon_invalid_length_3_failure() {
         scenario,
         b"test.sui".to_string(),
         b"50_PERCENT_5_PLUS_NAMES".to_string(),
+        user(),
     );
 
     scenario_val.end();
@@ -403,15 +333,16 @@ fun test_coupon_register(
     scenario: &mut Scenario,
     domain: String,
     coupon_code: String,
+    user: address,
 ) {
-    scenario.next_tx(user());
+    scenario.next_tx(user);
     {
-        let mut suins = test_scenario::take_shared<SuiNS>(scenario);
+        let mut suins = scenario.take_shared<SuiNS>();
         let mut intent = init_registration(
             &mut suins,
             domain,
         );
-        let clock = test_scenario::take_shared<Clock>(scenario);
+        let clock = scenario.take_shared<Clock>();
         coupon_house::apply_coupon(
             &mut suins,
             &mut intent,
@@ -431,17 +362,19 @@ fun test_coupon_renewal(
     domain: String,
     renewal_years: u8,
     coupon_code: String,
+    user: address,
 ) {
-    scenario.next_tx(user());
+    scenario.next_tx(user);
     {
-        let clock = test_scenario::take_shared<Clock>(scenario);
+        let mut suins = scenario.take_shared<SuiNS>();
+        let clock = scenario.take_shared<Clock>();
         let nft = suins::suins_registration::new_for_testing(
             suins::domain::new(domain),
             1,
             &clock,
             scenario.ctx(),
         );
-        let mut suins = test_scenario::take_shared<SuiNS>(scenario);
+
         let mut intent = init_renewal(
             &mut suins,
             &nft,
