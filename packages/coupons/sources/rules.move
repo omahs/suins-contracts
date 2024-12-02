@@ -132,7 +132,7 @@ public fun assert_is_valid_discount_type(`type`: u8) {
 // for amounts, if we have a percentage discount, our max num is 100.
 public fun assert_is_valid_amount(_: u8, amount: u64) {
     assert!(amount > 0, EInvalidAmount); // protect from division by 0. 0 doesn't make sense in any scenario.
-    assert!(amount<=100, EInvalidAmount);
+    assert!(amount <= 100, EInvalidAmount);
 }
 
 // We check a DomainSize Rule against the length of a domain.

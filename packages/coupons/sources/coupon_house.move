@@ -124,7 +124,6 @@ public fun apply_coupon(
     );
 }
 
-/// Register a name using a coupon code.
 #[deprecated]
 public fun register_with_coupon(
     _suins: &mut SuiNS,
@@ -138,11 +137,6 @@ public fun register_with_coupon(
     abort 1337
 }
 
-// A convenient helper to calculate the price in a PTB.
-// Important: This function doesn't check the validity of the coupon (Whether
-// the user can indeed use it)
-// Nor does it calculate the original price. This is part of the Frontend
-// anyways.
 #[deprecated]
 public fun calculate_sale_price(
     _suins: &SuiNS,

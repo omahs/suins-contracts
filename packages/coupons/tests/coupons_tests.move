@@ -209,7 +209,7 @@ fun specific_max_years() {
         option::none(),
         option::none(),
         option::none(),
-        option::some(range::new(1, 1)),
+        option::some(range::new(0, 1)),
     );
 }
 
@@ -459,7 +459,7 @@ fun test_coupon_register(
     domain: String,
     coupon_code: String,
     user: address,
-    amount: Option<u64>,
+    amount: Option<u64>, // optional param to test for expected amount
 ) {
     scenario.next_tx(user);
     {
@@ -495,7 +495,7 @@ fun test_coupon_renewal(
     renewal_years: u8,
     coupon_code: String,
     user: address,
-    amount: Option<u64>,
+    amount: Option<u64>, // optional param to test for expected amount
 ) {
     scenario.next_tx(user);
     {
