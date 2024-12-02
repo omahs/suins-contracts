@@ -22,6 +22,7 @@ use std::string::String;
 use sui::clock::Clock;
 use sui::test_scenario::{Scenario, return_shared};
 use sui::test_utils::{Self, destroy};
+use suins::constants::mist_per_sui;
 use suins::payment::PaymentIntent;
 use suins::suins::SuiNS;
 use suins::suins_registration::SuinsRegistration;
@@ -37,86 +38,67 @@ fun populate_coupons(scenario: &mut Scenario) {
     return_shared(suins);
 }
 
-// // Please look up at `setup` file to see all the coupon names and their
-// // respective logic.
-// // Tests the e2e experience for coupons (a list of different coupons with
-// // different rules)
-// #[test]
-// fun test_e2e() {
-//     let mut scenario_val = test_init();
-//     let scenario = &mut scenario_val;
-//     // populate all coupons.
-//     populate_coupons(scenario);
+// Please look up at `setup` file to see all the coupon names and their
+// respective logic.
+// Tests the e2e experience for coupons (a list of different coupons with
+// different rules)
+#[test]
+fun test_e2e() {
+    let mut scenario_val = test_init();
+    let scenario = &mut scenario_val;
+    // populate all coupons.
+    populate_coupons(scenario);
 
-//     // 5 SUI discount coupon.
-//     register_with_coupon(
-//         b"5_SUI_DISCOUNT".to_string(),
-//         b"test.sui".to_string(),
-//         1,
-//         195 * mist_per_sui(),
-//         0,
-//         user(),
-//         scenario,
-//     );
+    // original price would be 400 (200*2 years). 25% discount should bring it
+    // down to 300.
+    test_coupon_renewal(
+        scenario,
+        b"jest.sui".to_string(),
+        2,
+        b"25_PERCENT_DISCOUNT_MAX_2_YEARS".to_string(),
+        user(),
+        option::some(300 * mist_per_sui()),
+    );
 
-//     // original price would be 400 (200*2 years). 25% discount should bring it
-//     // down to 300.
-//     register_with_coupon(
-//         b"25_PERCENT_DISCOUNT_MAX_2_YEARS".to_string(),
-//         b"jest.sui".to_string(),
-//         2,
-//         300 * mist_per_sui(),
-//         0,
-//         user(),
-//         scenario,
-//     );
+    // Test that this user-specific coupon works as expected
+    test_coupon_renewal(
+        scenario,
+        b"fest.sui".to_string(),
+        2,
+        b"25_PERCENT_DISCOUNT_USER_ONLY".to_string(),
+        user(),
+        option::some(300 * mist_per_sui()),
+    );
 
-//     // Test that this user-specific coupon works as expected
-//     register_with_coupon(
-//         b"25_PERCENT_DISCOUNT_USER_ONLY".to_string(),
-//         b"fest.sui".to_string(),
-//         2,
-//         300 * mist_per_sui(),
-//         0,
-//         user(),
-//         scenario,
-//     );
+    // 50% discount only on names 5+ digits
+    test_coupon_register(
+        scenario,
+        b"testo.sui".to_string(),
+        b"50_PERCENT_5_PLUS_NAMES".to_string(),
+        user(),
+        option::some(25 * mist_per_sui()),
+    );
 
-//     // 50% discount only on names 5+ digits
-//     register_with_coupon(
-//         b"50_PERCENT_5_PLUS_NAMES".to_string(),
-//         b"testo.sui".to_string(),
-//         1,
-//         25 * mist_per_sui(),
-//         0,
-//         user(),
-//         scenario,
-//     );
+    // 50% discount only on names 3 digit names.
+    test_coupon_register(
+        scenario,
+        b"tes.sui".to_string(),
+        b"50_PERCENT_3_DIGITS".to_string(),
+        user(),
+        option::some(600 * mist_per_sui()),
+    );
 
-//     // 50% discount only on names 3 digit names.
-//     register_with_coupon(
-//         b"50_PERCENT_3_DIGITS".to_string(),
-//         b"tes.sui".to_string(),
-//         1,
-//         600 * mist_per_sui(),
-//         0,
-//         user(),
-//         scenario,
-//     );
+    // 50% DISCOUNT, with all possible rules involved.
+    test_coupon_register(
+        scenario,
+        b"teso.sui".to_string(),
+        b"50_DISCOUNT_SALAD".to_string(),
+        user(),
+        option::some(100 * mist_per_sui()),
+    );
 
-//     // 50% DISCOUNT, with all possible rules involved.
-//     register_with_coupon(
-//         b"50_DISCOUNT_SALAD".to_string(),
-//         b"teso.sui".to_string(),
-//         1,
-//         100 * mist_per_sui(),
-//         0,
-//         user(),
-//         scenario,
-//     );
-
-//     scenario_val.end();
-// }
+    scenario_val.end();
+}
 
 #[test]
 fun zero_fee_purchase() {
@@ -136,7 +118,33 @@ fun zero_fee_purchase() {
         b"test.sui".to_string(),
         b"100%_OFF".to_string(),
         user(),
-        option::some(0),
+        option::some(0), // cost goes to 0
+    );
+
+    scenario_val.end();
+}
+
+#[test]
+fun twenty_percent_off_3() {
+    let mut scenario_val = test_init();
+    let scenario = &mut scenario_val;
+    // populate all coupons.
+    populate_coupons(scenario);
+    // 100% discount coupon.
+    admin_add_coupon(
+        b"20%_OFF".to_string(),
+        constants::percentage_discount_type(),
+        20,
+        scenario,
+    );
+    test_coupon_register(
+        scenario,
+        b"abc.sui".to_string(),
+        b"20%_OFF".to_string(),
+        user(),
+        option::some(
+            960 * mist_per_sui(),
+        ), // 3 character in test is 1200 SUI, 20% discount
     );
 
     scenario_val.end();
@@ -161,8 +169,34 @@ fun fifty_percent_off_4() {
         b"50%_OFF".to_string(),
         user(),
         option::some(
-            100 * suins::constants::mist_per_sui(),
+            100 * mist_per_sui(),
         ), // 4 character in test is 200 SUI, 50% discount
+    );
+
+    scenario_val.end();
+}
+
+#[test]
+fun seventy_percent_off_5() {
+    let mut scenario_val = test_init();
+    let scenario = &mut scenario_val;
+    // populate all coupons.
+    populate_coupons(scenario);
+    // 100% discount coupon.
+    admin_add_coupon(
+        b"70%_OFF".to_string(),
+        constants::percentage_discount_type(),
+        70,
+        scenario,
+    );
+    test_coupon_register(
+        scenario,
+        b"testo.sui".to_string(),
+        b"70%_OFF".to_string(),
+        user(),
+        option::some(
+            15 * mist_per_sui(),
+        ), // 5 character in test is 50 SUI, 70% discount
     );
 
     scenario_val.end();
@@ -265,6 +299,7 @@ fun coupon_not_valid_for_years_failure() {
         3,
         b"50_DISCOUNT_SALAD".to_string(),
         user(),
+        option::none(),
     );
     scenario_val.end();
 }
@@ -460,6 +495,7 @@ fun test_coupon_renewal(
     renewal_years: u8,
     coupon_code: String,
     user: address,
+    amount: Option<u64>,
 ) {
     scenario.next_tx(user);
     {
@@ -484,6 +520,12 @@ fun test_coupon_renewal(
             &clock,
             scenario.ctx(),
         );
+        if (amount.is_some()) {
+            assert!(
+                intent.request_data().base_amount() == amount.get_with_default(0),
+                0,
+            );
+        };
 
         return_shared(suins);
         return_shared(clock);
