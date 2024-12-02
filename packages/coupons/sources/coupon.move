@@ -1,6 +1,5 @@
 module coupons::coupon;
 
-use coupons::constants;
 use coupons::rules::{Self, CouponRules};
 
 /// A Coupon has a type, a value and a ruleset.
@@ -40,16 +39,6 @@ public(package) fun rules_mut(coupon: &mut Coupon): &mut CouponRules {
     &mut coupon.rules
 }
 
-/// A helper to calculate the final price after the discount.
-public(package) fun calculate_sale_price(coupon: &Coupon, price: u64): u64 {
-    // If it's fixed price, we just deduce the amount.
-    if (coupon.kind == constants::fixed_price_discount_type()) {
-        if (coupon.amount > price) return 0; // protect underflow case.
-        return price - coupon.amount
-    };
-
-    // If it's discount price, we calculate the discount
-    let discount = (((price as u128) * (coupon.amount as u128) / 100) as u64);
-    // then remove it from the sale price.
-    price - discount
+public(package) fun discount_percentage(coupon: &Coupon): u64 {
+    coupon.amount
 }
