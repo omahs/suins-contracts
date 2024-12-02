@@ -86,22 +86,6 @@ public fun unauthorized_test_app(): UnauthorizedTestApp {
 /// A helper to add a bunch of coupons (with different setups) that we can use
 /// on the coupon tests.
 public fun populate_coupons(data_mut: &mut Data, ctx: &mut TxContext) {
-    // 5 SUI DISCOUNT, ONLY CLAIMABLE TWICE
-    coupon_house::app_add_coupon(
-        data_mut,
-        utf8(b"5_SUI_DISCOUNT"),
-        constants::fixed_price_discount_type(),
-        5 * MIST_PER_SUI,
-        rules::new_coupon_rules(
-            option::none(),
-            option::some(2),
-            option::none(),
-            option::none(),
-            option::none(),
-        ),
-        ctx,
-    );
-
     // 25% DISCOUNT, ONLY FOR 2 YEARS OR LESS REGISTRATIONS
     coupon_house::app_add_coupon(
         data_mut,
