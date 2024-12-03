@@ -479,7 +479,6 @@ fun test_coupon_register(
         if (amount.is_some()) {
             assert!(
                 intent.request_data().base_amount() == amount.get_with_default(0),
-                0,
             );
         };
 
@@ -523,7 +522,6 @@ fun test_coupon_renewal(
         if (amount.is_some()) {
             assert!(
                 intent.request_data().base_amount() == amount.get_with_default(0),
-                0,
             );
         };
 

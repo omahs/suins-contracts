@@ -40,5 +40,7 @@ public(package) fun rules_mut(coupon: &mut Coupon): &mut CouponRules {
 }
 
 public(package) fun discount_percentage(coupon: &Coupon): u64 {
+    assert!(coupon.amount > 0 && coupon.amount <= 100);
+
     coupon.amount
 }

@@ -87,7 +87,7 @@ fun init(otw: SUINS, ctx: &mut TxContext) {
         AdminCap {
             id: object::new(ctx),
         },
-        tx_context::sender(ctx),
+        ctx.sender(),
     );
 
     let suins = SuiNS {
@@ -265,9 +265,8 @@ public fun init_for_testing(ctx: &mut TxContext): SuiNS {
         balance: balance::zero(),
     };
 
-    authorize_app<Test>(&admin_cap, &mut suins);
-    add_config(
-        &admin_cap,
+    admin_cap.authorize_app<Test>(&mut suins);
+    admin_cap.add_config(
         &mut suins,
         config::new(
             b"000000000000000000000000000000000",
@@ -277,13 +276,12 @@ public fun init_for_testing(ctx: &mut TxContext): SuiNS {
         ),
     );
 
-    add_config(&admin_cap, &mut suins, new_pricing_config());
-    add_config(
-        &admin_cap,
+    admin_cap.add_config(&mut suins, new_pricing_config());
+    admin_cap.add_config(
         &mut suins,
         pricing_config::new_renewal_config(new_pricing_config()),
     );
-    transfer::transfer(admin_cap, tx_context::sender(ctx));
+    transfer::transfer(admin_cap, ctx.sender());
 
     suins
 }
