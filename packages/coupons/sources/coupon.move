@@ -2,6 +2,8 @@ module coupons::coupon;
 
 use coupons::rules::{Self, CouponRules};
 
+const EInvalidDiscountPercentage: u64 = 1;
+
 /// A Coupon has a type, a value and a ruleset.
 /// - `Rules` are defined on the module `rules`, and covers a variety of
 /// everything we needed for the service.
@@ -40,7 +42,10 @@ public(package) fun rules_mut(coupon: &mut Coupon): &mut CouponRules {
 }
 
 public(package) fun discount_percentage(coupon: &Coupon): u64 {
-    assert!(coupon.amount > 0 && coupon.amount <= 100);
+    assert!(
+        coupon.amount > 0 && coupon.amount <= 100,
+        EInvalidDiscountPercentage,
+    );
 
     coupon.amount
 }
