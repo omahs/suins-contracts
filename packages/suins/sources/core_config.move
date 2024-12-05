@@ -35,6 +35,8 @@ public struct CoreConfig has copy, store, drop {
     valid_tlds: VecSet<String>,
     /// The `PaymentIntent` version that can be used for handling sales.
     payments_version: u8,
+    /// Maximum number of years available for a domain.
+    max_years: u8,
     // Extra fields for future use.
     extra: VecMap<String, String>,
 }
@@ -44,6 +46,7 @@ public fun new(
     min_label_length: u8,
     max_label_length: u8,
     payments_version: u8,
+    max_years: u8,
     valid_tlds: vector<String>,
     extra: VecMap<String, String>,
 ): CoreConfig {
@@ -52,13 +55,22 @@ public fun new(
         min_label_length,
         max_label_length,
         payments_version,
+        max_years,
         valid_tlds: vec_set::from_keys(valid_tlds),
         extra,
     }
 }
 
 public fun default(): CoreConfig {
-    new(b"", 3, 63, constants::payments_version!(), vector[constants::sui_tld()], vec_map::empty())
+    new(
+        b"",
+        3,
+        63,
+        constants::payments_version!(),
+        5,
+        vector[constants::sui_tld()],
+        vec_map::empty(),
+    )
 }
 
 public fun public_key(config: &CoreConfig): vector<u8> {
@@ -81,10 +93,17 @@ public fun payments_version(config: &CoreConfig): u8 {
     config.payments_version
 }
 
+public fun max_years(config: &CoreConfig): u8 {
+    config.max_years
+}
+
 public(package) fun assert_is_valid_for_sale(config: &CoreConfig, domain: &Domain) {
     assert!(!domain.is_subdomain(), ESubnameNotSupported);
     assert!(config.is_valid_tld(domain.tld()), EInvalidTld);
 
     let sld_len = domain.sld().length();
-    assert!(sld_len >= (config.min_label_length as u64) && sld_len <= (config.max_label_length as u64), EInvalidLength);
+    assert!(
+        sld_len >= (config.min_label_length as u64) && sld_len <= (config.max_label_length as u64),
+        EInvalidLength,
+    );
 }

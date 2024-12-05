@@ -13,6 +13,7 @@ fun test_config_creation_and_field_access() {
         3,
         63,
         constants::payments_version!(),
+        1,
         vector[constants::sui_tld()],
         vec_map::empty(),
     );
@@ -41,6 +42,7 @@ fun custom_config_valid_length() {
         1,
         63,
         constants::payments_version!(),
+        5,
         vector[constants::sui_tld()],
         vec_map::empty(),
     );
@@ -77,6 +79,7 @@ fun custom_config(min: u8, max: u8): CoreConfig {
         min,
         max,
         constants::payments_version!(),
+        5,
         vector[constants::sui_tld()],
         vec_map::empty(),
     )

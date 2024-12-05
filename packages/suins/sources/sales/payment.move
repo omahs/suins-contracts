@@ -13,10 +13,6 @@
 ///
 /// Authorized apps can also apply discounts to the payment intent. This is
 /// useful for system-level discounts, or user-specific discounts.
-///
-/// TODO: Consider re-using `RequestData` inside the `Receipt`.
-/// TODO: Add settings for max year of renewals / max duration of registration here?
-/// (Maybe through an admin controlled config)
 module suins::payment;
 
 use std::string::String;
@@ -56,6 +52,8 @@ const ECannotRenewSubdomain: vector<u8> = b"Cannot renew a subdomain using the p
 #[error]
 const EDiscountAlreadyApplied: vector<u8> =
     b"This discount key has already been applied to the payment intent.";
+#[error]
+const ECannotExceedMaxYears: vector<u8> = b"Cannot exceed the maximum number of years.";
 
 /// The data required to complete a payment request.
 public struct RequestData has drop {
@@ -224,6 +222,7 @@ public fun init_registration(suins: &mut SuiNS, domain: String): PaymentIntent {
 public fun init_renewal(suins: &mut SuiNS, nft: &SuinsRegistration, years: u8): PaymentIntent {
     let domain = nft.domain();
     assert!(!domain.is_subdomain(), ECannotRenewSubdomain);
+    assert!(years <= suins.get_config<CoreConfig>().max_years(), ECannotExceedMaxYears);
 
     let price = suins
         .get_config<RenewalConfig>()
@@ -273,7 +272,10 @@ public fun renew(
 ) {
     match (receipt) {
         Receipt::Renewal { domain, years, version } => {
-            assert!(version == suins.get_config<CoreConfig>().payments_version(), EVersionMismatch);
+            let config = suins.get_config<CoreConfig>();
+            let max_years = config.max_years();
+
+            assert!(version == config.payments_version(), EVersionMismatch);
             assert!(nft.domain() == domain, EReceiptDomainMissmatch);
             let registry = suins.pkg_registry_mut<Registry>();
             // Calculate target expiration. Aborts if expiration or selected
@@ -285,6 +287,13 @@ public fun renew(
                 years,
             );
 
+            // Check target_expiration is within the max years.
+            assert!(
+                target_expiration <= (
+                clock.timestamp_ms() + ((max_years + 1 as u64) * constants::year_ms())
+            ),
+                ECannotExceedMaxYears,
+            );
             // set the expiration of the NFT + the registry's name record.
             registry.set_expiration_timestamp_ms(
                 nft,

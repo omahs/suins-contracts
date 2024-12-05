@@ -288,7 +288,6 @@ fun try_to_renew_subdomain() {
     abort 1337
 }
 
-
 #[test, expected_failure(abort_code = ::suins::payment::ERecordExpired)]
 fun try_renewing_expired_name() {
     let mut ctx = tx_context::dummy();
@@ -336,6 +335,43 @@ fun try_renewing_non_existent_name() {
     );
 
     receipt.renew(&mut suins, &mut nft, &clock, &mut ctx);
+
+    abort 1337
+}
+
+#[test, expected_failure(abort_code = ::suins::payment::ECannotExceedMaxYears)]
+fun try_to_renew_for_too_long() {
+    let mut ctx = tx_context::dummy();
+    let mut suins = setup_suins(&mut ctx);
+    let clock = clock::create_for_testing(&mut ctx);
+
+    let domain = b"test.sui".to_string();
+
+    let intent = payment::init_registration(&mut suins, domain);
+    let receipt = handle_payment(intent, &mut suins, &mut ctx);
+    let mut nft = receipt.register(&mut suins, &clock, &mut ctx);
+
+    let receipt = payment::test_renewal_receipt(domain, 6, constants::payments_version!());
+
+    receipt.renew(&mut suins, &mut nft, &clock, &mut ctx);
+
+    abort 1337
+}
+
+#[test, expected_failure(abort_code = ::suins::payment::ECannotExceedMaxYears)]
+fun try_renewal_process_longer_than_max_years() {
+    let mut ctx = tx_context::dummy();
+    let mut suins = setup_suins(&mut ctx);
+    let clock = clock::create_for_testing(&mut ctx);
+
+    let nft = suins_registration::new_for_testing(
+        domain::new(b"test.sui".to_string()),
+        1,
+        &clock,
+        &mut ctx,
+    );
+
+    let _intent = payment::init_renewal(&mut suins, &nft, 6);
 
     abort 1337
 }
